@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration
+        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+        "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+<generatorConfiguration>
+    <context id="Mysql" targetRuntime="MyBatis3DynamicSql">
+        <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
+                        connectionURL="jdbc:mysql://localhost:3306/movie_booking"
+                        userId="root"
+                        password="ubona123">
+        </jdbcConnection>
+        <javaModelGenerator targetPackage="com.project.bookmyshow.db.mappers"
+                            targetProject="/Users/yatharthlakhera/GitWorkspace/BookMyShow/src/main/java">
+            <property name="enableSubPackages" value="true"/>
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <javaClientGenerator targetPackage="com.project.bookmyshow.db.mappers"
+                             targetProject="/Users/yatharthlakhera/GitWorkspace/BookMyShow/src/main/java"
+                             type="XMLMAPPER">
+            <property name="enableSubPackages" value="true"/>
+        </javaClientGenerator>
+
+        <table tableName="TBL_Customer" domainObjectName="Customer">
+            <generatedKey column="customer_id" sqlStatement="Mysql" identity="true"/>
+            <columnOverride column="role" javaType="com.project.bookmyshow.enums.CustomerRole" jdbcType="VARCHAR"/>
+        </table>
+
+        <table tableName="TBL_Cinema" domainObjectName="Cinema">
+            <generatedKey column="cinema_id" sqlStatement="Mysql" identity="true"/>
+        </table>
+
+        <table tableName="TBL_Hall" domainObjectName="Hall">
+            <generatedKey column="hall_id" sqlStatement="Mysql" identity="true"/>
+        </table>
+
+        <table tableName="TBL_LiveShow" domainObjectName="LiveShow">
+            <generatedKey column="live_show_id" sqlStatement="Mysql" identity="true"/>
+        </table>
+
+        <table tableName="TBL_ScheduledLiveShow" domainObjectName="ScheduledLiveShow">
+            <generatedKey column="scheduled_live_show_id" sqlStatement="Mysql" identity="true"/>
+            <columnOverride column="tickets_price" javaType="Double" typeHandler="com.project.bookmyshow.db.typehandlers.AmountTypeHandler"
+                            jdbcType="INTEGER"/>
+        </table>
+
+        <table tableName="TBL_Seat" domainObjectName="Seat">
+            <generatedKey column="seat_id" sqlStatement="Mysql" identity="true"/>
+        </table>
+
+        <table tableName="TBL_SeatsBooking" domainObjectName="SeatsBooking">
+            <generatedKey column="seat_booking_id" sqlStatement="Mysql" identity="true"/>
+        </table>
+
+        <table tableName="TBL_Show" domainObjectName="Show">
+            <generatedKey column="show_id" sqlStatement="Mysql" identity="true"/>
+            <columnOverride column="show_type" javaType="com.project.bookmyshow.enums.ShowType" jdbcType="VARCHAR"/>
+        </table>
+
+        <table tableName="TBL_ShowBooking" domainObjectName="ShowBooking">
+            <generatedKey column="booking_id" sqlStatement="Mysql" identity="true"/>
+            <columnOverride column="tickets_price" javaType="Double" typeHandler="com.project.bookmyshow.db.typehandlers.AmountTypeHandler"
+                            jdbcType="INTEGER"/>
+            <columnOverride column="total_booking_amount" javaType="Double" typeHandler="com.project.bookmyshow.db.typehandlers.AmountTypeHandler"
+                            jdbcType="INTEGER"/>
+        </table>
+
+        <table tableName="TBL_ShowBookingStatus" domainObjectName="ShowBookingStatus">
+            <generatedKey column="show_booking_status_id" sqlStatement="Mysql" identity="true"/>
+        </table>
+
+        <table tableName="TBL_StatusMaster" domainObjectName="StatusMaster">
+            <generatedKey column="status_id" sqlStatement="Mysql" identity="true"/>
+        </table>
+
+    </context>
+</generatorConfiguration>

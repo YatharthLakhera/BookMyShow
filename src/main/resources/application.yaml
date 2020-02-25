@@ -1,0 +1,9 @@
+logging:
+  level:
+    com.project.bookmyshow: DEBUG
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/movie_booking
+    username: root
+    password: ubona123
+    driver-class-name: com.mysql.jdbc.Driver
