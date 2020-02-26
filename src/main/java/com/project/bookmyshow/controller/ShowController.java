@@ -1,13 +1,11 @@
 package com.project.bookmyshow.controller;
 
 import com.project.bookmyshow.constants.ErrorMessages;
-import com.project.bookmyshow.db.dao.CustomerDAO;
-import com.project.bookmyshow.db.mappers.Customer;
-import com.project.bookmyshow.enums.CustomerRole;
 import com.project.bookmyshow.models.APIResponse;
 import com.project.bookmyshow.models.request.AddShowRequest;
 import com.project.bookmyshow.models.response.ShowDetail;
 import com.project.bookmyshow.models.response.ErrorResponse;
+import com.project.bookmyshow.services.CustomerService;
 import com.project.bookmyshow.services.ShowService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +23,8 @@ public class ShowController {
 
     @Autowired
     private ShowService showService;
+    @Autowired
+    private CustomerService customerService;
 
     /**
      * This API returns the list of all the live show details {@link ShowDetail}
@@ -57,9 +57,7 @@ public class ShowController {
 
     @PostMapping(value = "/add", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<APIResponse> addShow(@RequestBody AddShowRequest addShowRequest) {
-        CustomerDAO customerDAO = new CustomerDAO();
-        Customer customer = customerDAO.getCustomerById(addShowRequest.getCustomerId());
-        if (customer != null && customer.getRole() == CustomerRole.ADMIN) {
+        if (customerService.isAdmin(addShowRequest.getCustomerId())) {
             return new ResponseEntity<>(showService.addNewShowToDB(addShowRequest), HttpStatus.CREATED);
         } else {
             return new ResponseEntity<>(

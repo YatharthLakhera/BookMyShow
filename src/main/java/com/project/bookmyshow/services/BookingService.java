@@ -10,7 +10,9 @@ import com.project.bookmyshow.models.request.BookingRequest;
 import com.project.bookmyshow.models.response.*;
 import com.project.bookmyshow.utils.ApplicationUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,6 +21,23 @@ import java.util.List;
 @Slf4j
 @Service
 public class BookingService {
+
+    @Autowired
+    private HallDAO hallDAO;
+    @Autowired
+    private ShowDAO showDAO;
+    @Autowired
+    private SeatDAO seatDAO;
+    @Autowired
+    private CinemaDAO cinemaDAO;
+    @Autowired
+    private LiveShowDAO liveShowDAO;
+    @Autowired
+    private SeatBookingDAO seatBookingDAO;
+    @Autowired
+    private ShowBookingDAO showBookingDAO;
+    @Autowired
+    private ScheduledLiveShowDAO scheduledLiveShowDAO;
 
     /**
      * This function initiates the booking and hold the
@@ -30,10 +49,8 @@ public class BookingService {
     public synchronized BookingDetails initateBooking(BookingRequest bookingRequest)
             throws BookingException {
 
-        ScheduledLiveShowDAO scheduledLiveShowDAO = new ScheduledLiveShowDAO();
         ScheduledLiveShow scheduledLiveShow = scheduledLiveShowDAO.
                 getScheduledLiveShowById(bookingRequest.getScheduledLiveShowId());
-        ShowBookingDAO showBookingDAO = new ShowBookingDAO();
         ShowBooking showBooking = showBookingDAO.initiateBooking(bookingRequest, scheduledLiveShow.getTicketsPrice());
         return getBookingDetails(showBooking, scheduledLiveShow);
     }
@@ -48,7 +65,6 @@ public class BookingService {
     public synchronized BookingDetails finalizeBooking(BookingPaymentRequest bookingPaymentRequest)
             throws BookingException {
         BookingDetails bookingDetails;
-        ShowBookingDAO showBookingDAO = new ShowBookingDAO();
         ShowBooking showBooking = showBookingDAO.getInitiatedBookingBy(bookingPaymentRequest);
         showBooking = showBookingDAO.updateBookingStatus(showBooking, StatusConstant.INPROGRESS);
         // Mocking Payment
@@ -74,9 +90,25 @@ public class BookingService {
      * @return
      */
     public BookingDetails getBookingDetails(String bookingRefNo) {
-        ShowBookingDAO showBookingDAO = new ShowBookingDAO();
         ShowBooking showBooking = showBookingDAO.getShowBookingBy(bookingRefNo);
         return getBookingDetails(showBooking);
+    }
+
+    /**
+     * This function returns list of {@link BookingDetails} for the ticket
+     * booked by the customer based on customerId
+     * @param customerId
+     * @return
+     */
+    public List<BookingDetails> getBookingDetails(int customerId) {
+        List<ShowBooking> showBookings = showBookingDAO.getBookedShowByCustomerId(customerId);
+        List<BookingDetails> bookingDetails = new ArrayList<>();
+        if (!CollectionUtils.isEmpty(showBookings)) {
+            for (ShowBooking showBooking : showBookings) {
+                bookingDetails.add(getBookingDetails(showBooking));
+            }
+        }
+        return bookingDetails;
     }
 
     /**
@@ -85,8 +117,7 @@ public class BookingService {
      * @param showBooking
      * @return
      */
-    public BookingDetails getBookingDetails(ShowBooking showBooking) {
-        ScheduledLiveShowDAO scheduledLiveShowDAO = new ScheduledLiveShowDAO();
+    private BookingDetails getBookingDetails(ShowBooking showBooking) {
         ScheduledLiveShow scheduledLiveShow = scheduledLiveShowDAO.
                 getScheduledLiveShowById(showBooking.getScheduledLiveShowId());
         return getBookingDetails(showBooking, scheduledLiveShow);
@@ -99,7 +130,7 @@ public class BookingService {
      * @param scheduledLiveShow
      * @return
      */
-    public BookingDetails getBookingDetails(ShowBooking showBooking, ScheduledLiveShow scheduledLiveShow) {
+    private BookingDetails getBookingDetails(ShowBooking showBooking, ScheduledLiveShow scheduledLiveShow) {
         return BookingDetails.builder()
                 .bookingRefNo(showBooking.getBookingRefNo())
                 .bookingStatus(ApplicationUtils.getStatusString(showBooking.getStatusId()))
@@ -116,12 +147,12 @@ public class BookingService {
      * @return
      */
     private ShowDetail getShowDetails(ScheduledLiveShow scheduledLiveShow, ShowBooking showBooking) {
-        LiveShow liveShow = new LiveShowDAO().getById(scheduledLiveShow.getLiveShowId());
-        Show show = new ShowDAO().getById(liveShow.getShowId());
-        Hall hall = new HallDAO().getHallById(liveShow.getHallId());
-        Cinema cinema = new CinemaDAO().getCinemayId(hall.getCinemaId());
-        List<Integer> seatIdList = new SeatBookingDAO().getSeatIdsForBooking(showBooking.getBookingId());
-        List<Seat> seatList = new SeatDAO().getSeatList(seatIdList);
+        LiveShow liveShow = liveShowDAO.getById(scheduledLiveShow.getLiveShowId());
+        Show show = showDAO.getById(liveShow.getShowId());
+        Hall hall = hallDAO.getHallById(liveShow.getHallId());
+        Cinema cinema = cinemaDAO.getCinemayId(hall.getCinemaId());
+        List<Integer> seatIdList = seatBookingDAO.getSeatIdsForBooking(showBooking.getBookingId());
+        List<Seat> seatList = seatDAO.getSeatList(seatIdList);
         List<SeatDetails> seatDetailsList = new ArrayList<>();
         for (Seat seat : seatList) {
             seatDetailsList.add(
@@ -150,12 +181,11 @@ public class BookingService {
                 .cinemaName(cinema.getCinemaName())
                 .hallDetail(hallDetail)
                 .build();
-        ShowDetail showDetail = ShowDetail.builder()
+        return ShowDetail.builder()
                 .showId(show.getShowId())
                 .showName(show.getShowName())
                 .showType(show.getShowType())
                 .cinemaDetails(Arrays.asList(cinemaDetail))
                 .build();
-        return showDetail;
     }
 }

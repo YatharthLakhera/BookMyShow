@@ -23,16 +23,23 @@ import java.util.List;
 @Service
 public class ShowService {
 
+    // ------ DAO --------
+    @Autowired
+    private ShowDAO showDAO;
+    @Autowired
+    private LiveShowDAO liveShowDAO;
+    @Autowired
+    private ScheduledLiveShowDAO scheduledLiveShowDAO;
+
+    // ------ Services ------
     @Autowired
     private CinemaService cinemaService;
 
     public List<ShowDetail> getShowDetailsList(boolean isLive) {
         List<ShowDetail> showDetails = new ArrayList<>();
-        ShowDAO showDAO = new ShowDAO();
         List<Show> showList = showDAO.getAllShow();
         if (!CollectionUtils.isEmpty(showList)) {
-            LiveShowDAO liveShowDAO = new LiveShowDAO();
-            Date currentDate = DateUtils.addMonths(new Date(), -AppConstants.DISPLAY_SHOW_FOR_MONTHS);
+            Date currentDate = DateUtils.addMonths(new Date(), - AppConstants.DISPLAY_SHOW_FOR_MONTHS);
             for (Show show : showList) {
                 ShowDetail showDetail = getShowDetails(show);
                 if (isLive && liveShowDAO.isShowLive(show.getShowId())) {
@@ -47,7 +54,6 @@ public class ShowService {
     }
 
     public ShowDetail getShowDetails(int showId) {
-        ShowDAO showDAO = new ShowDAO();
         Show show = showDAO.getById(showId);
         return getShowDetails(show);
     }
@@ -76,17 +82,14 @@ public class ShowService {
     }
 
     private Show addShowToDB(AddShowRequest addShowRequest) {
-        ShowDAO showDAO = new ShowDAO();
         return showDAO.insertOrUpdateShow(addShowRequest.getShowType(), addShowRequest.getShowName());
     }
 
     private LiveShow addLiveShowToDB(int showId, int hallId) {
-        LiveShowDAO liveShowDAO = new LiveShowDAO();
         return liveShowDAO.insertOrUpdateLiveShow(showId, hallId);
     }
 
     private ScheduledLiveShow addScheduledLiveShowToDB(int liveShowId, AddShowRequest addShowRequest) {
-        ScheduledLiveShowDAO scheduledLiveShowDAO = new ScheduledLiveShowDAO();
         return scheduledLiveShowDAO.insertOrUpdateScheduledLiveShowBy(
                 liveShowId,
                 addShowRequest.getStartTime(),

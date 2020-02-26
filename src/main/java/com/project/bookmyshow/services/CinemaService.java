@@ -9,6 +9,7 @@ import com.project.bookmyshow.models.response.HallDetail;
 import com.project.bookmyshow.models.response.ScheduledTimingDetails;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -18,9 +19,19 @@ import java.util.*;
 @Service
 public class CinemaService {
 
+    @Autowired
+    private HallDAO hallDAO;
+    @Autowired
+    private SeatDAO seatDAO;
+    @Autowired
+    private CinemaDAO cinemaDAO;
+    @Autowired
+    private LiveShowDAO liveShowDAO;
+    @Autowired
+    private ScheduledLiveShowDAO scheduledLiveShowDAO;
+
     public List<CinemaDetail> getCinemaList(boolean shouldShowSeatDetails) {
         List<CinemaDetail> cinemaDetailList = new ArrayList<>();
-        CinemaDAO cinemaDAO = new CinemaDAO();
         List<Cinema> cinemaList = cinemaDAO.getAllCinema();
         if (!CollectionUtils.isEmpty(cinemaList)) {
             for (Cinema cinema : cinemaList) {
@@ -31,7 +42,6 @@ public class CinemaService {
     }
 
     public CinemaDetail getCinemaDetails(int cinemaId, boolean shouldShowSeatDetails) {
-        CinemaDAO cinemaDAO = new CinemaDAO();
         return getCinemaDetails(cinemaDAO.getCinemayId(cinemaId), shouldShowSeatDetails);
     }
 
@@ -39,7 +49,6 @@ public class CinemaService {
         CinemaDetail.CinemaDetailBuilder cinemaDetailBuilder = CinemaDetail.builder()
                 .cinemaId(cinema.getCinemaId())
                 .cinemaName(cinema.getCinemaName());
-        HallDAO hallDAO = new HallDAO();
         List<Hall> hallList = hallDAO.getHallsByCinemaId(cinema.getCinemaId());
         if (!CollectionUtils.isEmpty(hallList)) {
             for (Hall hall : hallList) {
@@ -51,7 +60,6 @@ public class CinemaService {
 
     public HallDetail getHallDetail(int cinemaId, int hallId, boolean shouldShowSeatDetails) {
         HallDetail hallDetail = null;
-        HallDAO hallDAO = new HallDAO();
         Hall hall = hallDAO.getHallBy(cinemaId, hallId);
         if (hall != null) {
             hallDetail = getHallDetail(hallId, shouldShowSeatDetails);
@@ -60,7 +68,6 @@ public class CinemaService {
     }
 
     public HallDetail getHallDetail(int hallId, boolean shouldShowSeatDetails) {
-        HallDAO hallDAO = new HallDAO();
         return getHallDetail(hallDAO.getHallById(hallId), shouldShowSeatDetails);
     }
 
@@ -75,11 +82,9 @@ public class CinemaService {
 
     public List<ScheduledTimingDetails> getScheduledLiveShowByHallId(int hallId, boolean shouldShowSeatDetails) {
         List<ScheduledTimingDetails> scheduledLiveShowList = new ArrayList<>();
-        LiveShowDAO liveShowDAO = new LiveShowDAO();
         List<LiveShow> liveShowList = liveShowDAO.getLiveShowByHallId(hallId);
         if (!CollectionUtils.isEmpty(liveShowList)) {
             for(LiveShow liveShow : liveShowList) {
-                ScheduledLiveShowDAO scheduledLiveShowDAO = new ScheduledLiveShowDAO();
                 List<ScheduledLiveShow> scheduledLiveShows = scheduledLiveShowDAO.
                         getScheduledLiveShowByLiveShowId(liveShow.getLiveShowId());
                 if (!CollectionUtils.isEmpty(scheduledLiveShows)) {
@@ -106,7 +111,6 @@ public class CinemaService {
      * @return
      */
     public List<CinemaDetail> getCinemaDetailsForShow(int showId, boolean shouldShowSeatDetails) {
-        LiveShowDAO liveShowDAO = new LiveShowDAO();
         List<LiveShow> liveShowList = liveShowDAO.getAllLiveShowBy(showId);
         return new ArrayList<>(getCinemaDetailsForShow(liveShowList, shouldShowSeatDetails));
     }
@@ -142,13 +146,10 @@ public class CinemaService {
 
     private CinemaDetail getCinemaDetailsByShow(@NonNull LiveShow liveShow, boolean shouldShowSeatDetails) {
         CinemaDetail cinemaDetail = null;
-        HallDAO hallDAO = new HallDAO();
         Hall hall = hallDAO.getHallById(liveShow.getHallId());
-        ScheduledLiveShowDAO scheduledLiveShowDAO = new ScheduledLiveShowDAO();
         List<ScheduledLiveShow> scheduledLiveShowList =
                 scheduledLiveShowDAO.getScheduledLiveShowByLiveShowId(liveShow.getLiveShowId());
         if (!CollectionUtils.isEmpty(scheduledLiveShowList) && hall != null) {
-            CinemaDAO cinemaDAO = new CinemaDAO();
             Cinema cinema = cinemaDAO.getCinemayId(hall.getCinemaId());
             cinemaDetail = CinemaDetail.builder()
                     .cinemaId(cinema.getCinemaId())
@@ -185,7 +186,6 @@ public class CinemaService {
     }
 
     public List<SeatDetails> getSeatDetailsList(ScheduledLiveShow scheduledLiveShow, int hallId) {
-        SeatDAO seatDAO = new SeatDAO();
         List<Seat> availableSeatList = seatDAO.getAvailableSeatList(hallId, scheduledLiveShow.getLiveShowId());
         List<SeatDetails> seatDetailsList = new ArrayList<>();
         for (Seat seat : availableSeatList) {

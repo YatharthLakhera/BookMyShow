@@ -5,6 +5,7 @@ import com.project.bookmyshow.db.dao.CustomerDAO;
 import com.project.bookmyshow.db.dao.ShowBookingDAO;
 import com.project.bookmyshow.db.mappers.Customer;
 import com.project.bookmyshow.db.mappers.ShowBooking;
+import com.project.bookmyshow.enums.CustomerRole;
 import com.project.bookmyshow.exceptions.CustomerException;
 import com.project.bookmyshow.models.response.BookingDetails;
 import com.project.bookmyshow.models.response.CustomerDetail;
@@ -24,7 +25,7 @@ public class CustomerService {
     @Autowired
     private BookingService bookingService;
     @Autowired
-    CustomerDAO customerDAO;
+    private CustomerDAO customerDAO;
     /**
      * This function adds/registers the user and returns
      * the new customer details
@@ -91,20 +92,17 @@ public class CustomerService {
         return customerDetail;
     }
 
+    public boolean isAdmin(int customerId) {
+        Customer customer = customerDAO.getCustomerById(customerId);
+        return (customer != null && customer.getRole() == CustomerRole.ADMIN);
+    }
+
     /**
      * This function returns the booking history of the customer
      * @param customerId
      * @return
      */
     public List<BookingDetails> getBookingDetailsList(int customerId) {
-        ShowBookingDAO showBookingDAO = new ShowBookingDAO();
-        List<ShowBooking> showBookings = showBookingDAO.getBookedShowByCustomerId(customerId);
-        List<BookingDetails> bookingDetails = new ArrayList<>();
-        if (!CollectionUtils.isEmpty(showBookings)) {
-            for (ShowBooking showBooking : showBookings) {
-                bookingDetails.add(bookingService.getBookingDetails(showBooking));
-            }
-        }
-        return bookingDetails;
+        return bookingService.getBookingDetails(customerId);
     }
 }

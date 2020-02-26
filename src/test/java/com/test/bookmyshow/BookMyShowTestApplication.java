@@ -29,7 +29,6 @@ public class BookMyShowTestApplication {
 
     @Mock
     private CustomerDAO customerDAO;
-
     @InjectMocks
     private CustomerService customerService;
 

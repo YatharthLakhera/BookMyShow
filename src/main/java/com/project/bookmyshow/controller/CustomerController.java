@@ -31,7 +31,7 @@ public class CustomerController {
      * @return
      */
     @RequestMapping(value = "/login", method = RequestMethod.POST)
-    public ResponseEntity<APIResponse> getCustomerDetails(@RequestBody CustomerLoginRequest request) {
+    public ResponseEntity<APIResponse> getLoginCustomerDetails(@RequestBody CustomerLoginRequest request) {
         log.info("Customer Login - Email : {}, Password : {}", request.getEmail(), request.getPassword());
         CustomerDetail customerDetail = customerService.getCustomerDetails(request.getEmail(), request.getPassword());
         ResponseEntity<APIResponse> responseEntity = new ResponseEntity<>(
@@ -51,7 +51,7 @@ public class CustomerController {
      * @return
      */
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<APIResponse> addCustomer(@RequestBody AddCustomerRequest addCustomerRequest) {
+    public ResponseEntity<APIResponse> registerCustomer(@RequestBody AddCustomerRequest addCustomerRequest) {
         log.info("Add Customer : {}", ToStringBuilder.reflectionToString(addCustomerRequest));
         ResponseEntity<APIResponse> response;
         try {
