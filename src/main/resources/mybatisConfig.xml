@@ -10,8 +10,8 @@
                 <property name="" value="" />
             </transactionManager>
             <dataSource type="UNPOOLED">
-                <property name="driver" value="com.mysql.jdbc.Driver" />
-                <property name="url" value="jdbc:mysql://localhost:3306/movie_booking" />
+                <property name="driver" value="com.mysql.cj.jdbc.Driver" />
+                <property name="url" value="${url}" />
                 <property name="username" value="${username}" />
                 <property name="password" value="${password}" />
             </dataSource>
