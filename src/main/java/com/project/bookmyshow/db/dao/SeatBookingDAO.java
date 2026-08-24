@@ -1,11 +1,13 @@
 package com.project.bookmyshow.db.dao;
 
+import com.project.bookmyshow.constants.ErrorMessages;
 import com.project.bookmyshow.constants.StatusConstant;
 import com.project.bookmyshow.db.ConnectionFactory;
 import com.project.bookmyshow.db.mappers.SeatsBooking;
 import com.project.bookmyshow.db.mappers.SeatsBookingDynamicSqlSupport;
 import com.project.bookmyshow.db.mappers.SeatsBookingMapper;
 import com.project.bookmyshow.db.mappers.ShowBooking;
+import com.project.bookmyshow.exceptions.BookingException;
 import com.project.bookmyshow.utils.BookingUtils;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
@@ -24,20 +26,14 @@ public class SeatBookingDAO {
         @Cleanup SqlSession sqlSession = ConnectionFactory.INSTANCE.getSqlSession();
         SeatsBookingMapper seatsBookingMapper = sqlSession.getMapper(SeatsBookingMapper.class);
         Set<Integer> bookedSeatIds = new HashSet<>();
+        if (CollectionUtils.isEmpty(showBookingIds)) {
+            // An empty IN() list is not valid SQL - no bookings means no seats taken.
+            return bookedSeatIds;
+        }
         long curTimeInMillisec = System.currentTimeMillis();
         for (SeatsBooking seatsBooking : getBookedSeats(showBookingIds, seatsBookingMapper)) {
-            switch (seatsBooking.getSeatBookingStatus()) {
-                case StatusConstant.INITIATED:
-                    if (BookingUtils.isSeatOnHold(seatsBooking, curTimeInMillisec)) {
-                        bookedSeatIds.add(seatsBooking.getSeatId());
-                    }
-                    break;
-                case StatusConstant.SUCCESS:
-                case StatusConstant.INPROGRESS:
-                    bookedSeatIds.add(seatsBooking.getSeatId());
-                    break;
-                case StatusConstant.FAILED:
-                    break;
+            if (BookingUtils.occupiesSeat(seatsBooking, curTimeInMillisec)) {
+                bookedSeatIds.add(seatsBooking.getSeatId());
             }
         }
         return bookedSeatIds;
@@ -51,30 +47,61 @@ public class SeatBookingDAO {
     }
 
     public boolean areSeatsAvailable(List<Integer> seatIds, int scheduledLiveShowId) {
-        List<Integer> seatStatus = Arrays.asList(StatusConstant.INPROGRESS, StatusConstant.SUCCESS);
+        return getOccupiedSeatIds(seatIds, scheduledLiveShowId).isEmpty();
+    }
+
+    /**
+     * Returns the subset of the given seats that cannot currently be booked for the show.
+     * The query deliberately fetches every row for those seats and lets
+     * {@link BookingUtils#occupiesSeat} classify them, so the availability rule lives in
+     * exactly one place.
+     * @param seatIds
+     * @param scheduledLiveShowId
+     * @return
+     */
+    public Set<Integer> getOccupiedSeatIds(List<Integer> seatIds, int scheduledLiveShowId) {
+        Set<Integer> occupiedSeatIds = new HashSet<>();
+        if (CollectionUtils.isEmpty(seatIds)) {
+            // An empty IN() list is not valid SQL - nothing was asked about, nothing is taken.
+            return occupiedSeatIds;
+        }
         @Cleanup SqlSession sqlSession = ConnectionFactory.INSTANCE.getSqlSession();
         SeatsBookingMapper seatsBookingMapper = sqlSession.getMapper(SeatsBookingMapper.class);
         SeatsBookingDynamicSqlSupport.SeatsBooking seatsBookingSqlSupport = new SeatsBookingDynamicSqlSupport.SeatsBooking();
         List<SeatsBooking> seatsBookings = seatsBookingMapper.selectByExample()
                 .where(seatsBookingSqlSupport.seatId, SqlBuilder.isIn(seatIds))
                 .and(seatsBookingSqlSupport.scheduledLiveShowId, SqlBuilder.isEqualTo(scheduledLiveShowId))
-                .and(seatsBookingSqlSupport.seatBookingStatus, SqlBuilder.isNotIn(seatStatus))
                 .build().execute();
-        boolean areSeatsAvailable = true;
+        long curTimeInMillisec = System.currentTimeMillis();
         if (!CollectionUtils.isEmpty(seatsBookings)) {
             for (SeatsBooking seatsBooking : seatsBookings) {
-                if (BookingUtils.isSeatOnHold(seatsBooking)) {
-                    areSeatsAvailable = false;
-                    break;
+                if (BookingUtils.occupiesSeat(seatsBooking, curTimeInMillisec)) {
+                    occupiedSeatIds.add(seatsBooking.getSeatId());
                 }
             }
         }
-        return areSeatsAvailable;
+        return occupiedSeatIds;
     }
 
-    public int insertSeatsForBooking(List<Integer> seatIds, ShowBooking showBooking, SqlSession sqlSession) {
+    /**
+     * Claims the given seats for the booking. An existing row may only be reused when it
+     * belongs to a booking that has released the seat(failed, or a hold that ran out of
+     * time); reassigning a row that still holds the seat would silently transfer another
+     * customer's ticket, so that case is rejected instead.
+     *
+     * The caller commits only once every seat has been claimed, so throwing part way
+     * through leaves nothing behind.
+     * @param seatIds
+     * @param showBooking
+     * @param sqlSession
+     * @return
+     * @throws BookingException
+     */
+    public int insertSeatsForBooking(List<Integer> seatIds, ShowBooking showBooking, SqlSession sqlSession)
+            throws BookingException {
         SeatsBookingMapper seatsBookingMapper = sqlSession.getMapper(SeatsBookingMapper.class);
         int entries = 0;
+        long curTimeInMillisec = System.currentTimeMillis();
         for (Integer seatId : seatIds) {
             SeatsBooking seatsBooking = getSeatIdsForBooking(showBooking.getScheduledLiveShowId(), seatId);
             if (seatsBooking == null) {
@@ -84,11 +111,15 @@ public class SeatBookingDAO {
                 seatsBooking.setSeatId(seatId);
                 seatsBooking.setSeatBookingStatus(StatusConstant.INITIATED);
                 entries += seatsBookingMapper.insertSelective(seatsBooking);
-            } else {
+            } else if (!BookingUtils.occupiesSeat(seatsBooking, curTimeInMillisec)) {
                 seatsBooking.setBookingId(showBooking.getBookingId());
                 seatsBooking.setSeatBookingStatus(StatusConstant.INITIATED);
                 seatsBooking.setModifiedAt(new Date());
                 entries += seatsBookingMapper.updateByPrimaryKeySelective(seatsBooking);
+            } else {
+                log.warn("Seat {} is already taken for scheduled live show {} by booking {}",
+                        seatId, showBooking.getScheduledLiveShowId(), seatsBooking.getBookingId());
+                throw new BookingException(ErrorMessages.SEAT_NOT_AVAILABLE);
             }
         }
         return entries;
