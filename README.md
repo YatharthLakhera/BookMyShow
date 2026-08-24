@@ -7,6 +7,33 @@ This project is the Prototype for BookMyShow Backend Design which containing :
 
 This microservice is built using Spring Boot for REST API, Mybatis3 for DB interaction and Mockito for Testing.
 
+## Tutorial
+
+A full walkthrough of this codebase lives in [`tutorial/`](tutorial/) — written for someone
+joining the project who knows Java, Spring Boot and MySQL but has not run a service in
+production. It covers the API surface, the database design, the request lifecycle, the
+booking concurrency model, and what would need to change before this served real customers.
+
+Start at [`tutorial/README.md`](tutorial/README.md).
+
+## Running locally
+
+Requires JDK 11+ and MySQL. Create the database, then start the app with the `local`
+profile to get the sample cinemas and shows:
+
+```bash
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS movie_booking;"
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+The schema is managed by Flyway (`src/main/resources/db/migration`) and is applied
+automatically at startup. Migrations are forward-only — nothing is ever dropped.
+
+Database credentials come from the `DB_URL`, `DB_USER` and `DB_PASSWORD` environment
+variables, defaulting to a local MySQL if unset.
+
+## API's
+
 This project provides with the working implementation for following API's :
 
 1. Getting all the Movie details.

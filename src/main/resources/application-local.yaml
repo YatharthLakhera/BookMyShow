@@ -1,0 +1,7 @@
+# Local development profile: run with --spring.profiles.active=local
+#
+# Adds the demo cinemas, halls, seats and shows on top of the schema. The seed location is
+# listed only here, so no other environment can load it.
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed

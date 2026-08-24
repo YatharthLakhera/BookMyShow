@@ -19,6 +19,37 @@ public class BookingUtils {
         return isOnHold(seatsBooking.getSeatBookingStatus(), seatsBooking.getModifiedAt(), currentTimeInMilliSeconds);
     }
 
+    /**
+     * Single authoritative answer to "does this row make its seat unavailable?".
+     *
+     * A seat is taken when it is confirmed({@link StatusConstant#SUCCESS}), when payment
+     * is under way({@link StatusConstant#INPROGRESS}), or when it is held by a checkout
+     * that has not yet run out of time({@link StatusConstant#INITIATED}). A booking that
+     * failed({@link StatusConstant#FAILED}) releases the seat.
+     *
+     * Every availability check must go through this method so the rule cannot drift
+     * between callers.
+     * @param seatsBooking
+     * @param currentTimeInMilliSeconds
+     * @return
+     */
+    public static boolean occupiesSeat(@NonNull SeatsBooking seatsBooking, long currentTimeInMilliSeconds) {
+        switch (seatsBooking.getSeatBookingStatus()) {
+            case StatusConstant.SUCCESS:
+            case StatusConstant.INPROGRESS:
+                return true;
+            case StatusConstant.INITIATED:
+                return isSeatOnHold(seatsBooking, currentTimeInMilliSeconds);
+            case StatusConstant.FAILED:
+                return false;
+            default:
+                // An unrecognised status must never be read as "free" - refusing to
+                // guess is the safe direction for a seat availability check.
+                throw new IllegalStateException(
+                        "Unknown seat booking status : " + seatsBooking.getSeatBookingStatus());
+        }
+    }
+
     public static boolean isBookingSessionOnHold(ShowBooking showBooking) {
         return isOnHold(showBooking.getStatusId(), showBooking.getModifiedAt());
     }
